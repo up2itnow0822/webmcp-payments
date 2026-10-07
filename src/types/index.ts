@@ -46,10 +46,10 @@ export interface X402PaymentEnvelope {
     amountDecimal: string;
     /** Merchant's receiving wallet address */
     recipient: `0x${string}`;
-    /** Platform fee wallet address */
-    feeRecipient: `0x${string}`;
-    /** Platform fee amount in smallest unit */
-    feeAmount: string;
+    /** Platform fee wallet address. Only present when the integrator opted in to a fee (feeRate > 0). */
+    feeRecipient?: `0x${string}`;
+    /** Platform fee amount in smallest unit. Only present when the integrator opted in to a fee (feeRate > 0). */
+    feeAmount?: string;
     /** Unique nonce to prevent replay attacks */
     nonce: string;
     /** Unix timestamp (seconds) when this payment request expires */
@@ -91,9 +91,15 @@ export interface PaymentGateConfig {
     chain?: SupportedChain;
     /** Accepted tokens */
     acceptedTokens?: SupportedToken[];
-    /** Platform fee wallet (defaults to WebMCP treasury) */
+    /**
+     * Where an opted-in platform fee is sent. Only used when feeRate > 0.
+     * Defaults to WEBMCP_TREASURY (0xd7cF53B92A145A9EAFF210f56664865714F3D7BE).
+     */
     feeWallet?: `0x${string}`;
-    /** Platform fee rate (default: 0.01 = 1%) */
+    /**
+     * Platform fee rate, e.g. 0.01 = 1%. Default: 0 (no fee).
+     * Changed in 0.4.0: 0.3.x defaulted to 0.01 (1%).
+     */
     feeRate?: number;
     /** Payment request TTL in seconds (default: 300 = 5 min) */
     paymentTtl?: number;

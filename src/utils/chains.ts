@@ -3,11 +3,20 @@
  */
 import type { ChainConfig, SupportedChain, SupportedToken } from '../types/index.js';
 
-// ─── WebMCP treasury (platform fee recipient) ──────────────────────────────
+// ─── WebMCP treasury ─────────────────────────────────────────────────────
+// Receives the optional platform fee ONLY when an integrator opts in by
+// passing `feeRate > 0` to PaymentGate without their own `feeWallet`.
+// Nothing is sent here by default (default feeRate is 0 since 0.4.0).
 export const WEBMCP_TREASURY = '0xd7cF53B92A145A9EAFF210f56664865714F3D7BE' as const;
 
-// ─── Platform fee rate: 1.0% ──────────────────────────────────────────────
+// ─── Suggested opt-in platform fee rate: 1.0% ────────────────────────────
+// Not applied by default. PaymentGate's default feeRate is DEFAULT_FEE_RATE (0).
+// This was the implicit default in 0.3.x; pass `feeRate: PLATFORM_FEE_RATE`
+// to keep the 0.3.x behaviour.
 export const PLATFORM_FEE_RATE = 0.01;
+
+// ─── Default fee rate used by PaymentGate: 0% (no fee) ────────────────────
+export const DEFAULT_FEE_RATE = 0;
 
 // ─── USDC decimals ────────────────────────────────────────────────────────
 export const TOKEN_DECIMALS: Record<SupportedToken, number> = {
@@ -102,7 +111,9 @@ export function fromSmallestUnit(amount: bigint, token: SupportedToken): string 
 }
 
 /**
- * Calculate platform fee amount (1.0%)
+ * Calculate a fee amount for a given rate.
+ * Pure helper: it computes a number and charges nothing. If `feeRate` is
+ * omitted it uses PLATFORM_FEE_RATE (1%), unchanged from 0.3.x.
  */
 export function calculateFee(amount: bigint, feeRate: number = PLATFORM_FEE_RATE): bigint {
   // Use integer arithmetic to avoid floating point issues

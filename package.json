@@ -1,7 +1,7 @@
 {
   "name": "webmcp-payments",
-  "version": "0.3.1",
-  "description": "Agent payment acceptance layer for websites \u2014 x402 + WebMCP + Base chain",
+  "version": "0.4.0",
+  "description": "x402 (HTTP 402) payment gate, on-chain verifier and WebMCP pricing discovery for EVM chains (Base, Arbitrum, Optimism). No platform fee by default.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -27,13 +27,20 @@
       "types": "./dist/discovery/index.d.ts"
     }
   },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "build": "tsup",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts"
+    "test": "vitest run",
+    "smoke": "node scripts/smoke.mjs",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm test"
   },
   "keywords": [
     "webmcp",
@@ -49,10 +56,6 @@
   ],
   "author": "up2itnow5280",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/up2itnow/webmcp-payments"
-  },
   "peerDependencies": {
     "viem": "^2.0.0"
   },
@@ -66,11 +69,6 @@
     "typescript": "^5.0.0",
     "vitest": "^1.0.0"
   },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
   "engines": {
     "node": ">=18.0.0"
   }

@@ -255,7 +255,9 @@ export class PaymentVerifier {
     payer: `0x${string}`
   ): { ok: boolean; error?: string } {
     const expectedAmount = BigInt(envelope.amount);
-    const expectedFee = BigInt(envelope.feeAmount);
+    // Fee fields are only present when the integrator opted in to a fee.
+    const expectedFee = envelope.feeAmount !== undefined ? BigInt(envelope.feeAmount) : 0n;
+    const feeRecipient = envelope.feeRecipient;
     const totalExpected = expectedAmount + expectedFee;
 
     // Look for a transfer to merchant (net amount after fee)
@@ -270,10 +272,10 @@ export class PaymentVerifier {
     });
 
     // Also check for fee transfer to platform
-    const feeTransfer = logs.find((log) => {
+    const feeTransfer = feeRecipient === undefined || expectedFee === 0n ? undefined : logs.find((log) => {
       if (log.topics.length < 3) return false;
       const toAddress = `0x${log.topics[2]?.slice(26)}` as Address;
-      if (toAddress.toLowerCase() !== envelope.feeRecipient.toLowerCase()) return false;
+      if (toAddress.toLowerCase() !== feeRecipient.toLowerCase()) return false;
       const value = BigInt(log.data);
       return value >= expectedFee;
     });

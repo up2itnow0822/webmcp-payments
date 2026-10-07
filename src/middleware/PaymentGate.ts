@@ -7,8 +7,12 @@
  *
  * Compatible with:
  *   - @mcp-b/global polyfill (navigator.modelContext)
- *   - Native Chrome 146 WebMCP
+ *   - Native browser WebMCP (navigator.modelContext), where available
  *   - Express / Fastify / plain Node.js HTTP handlers
+ *
+ * Fees: none by default (feeRate 0). A platform fee is only added when the
+ * integrator passes `feeRate > 0`; it goes to `feeWallet`, or to
+ * WEBMCP_TREASURY if no feeWallet is given.
  */
 import type {
   PaymentGateConfig,
@@ -28,7 +32,7 @@ import type {
 } from '../types/index.js';
 import {
   WEBMCP_TREASURY,
-  PLATFORM_FEE_RATE,
+  DEFAULT_FEE_RATE,
   getTokenAddress,
   toSmallestUnit,
   calculateFee,
@@ -53,12 +57,21 @@ export class PaymentGate {
       throw new Error(`Invalid merchantWallet address: ${config.merchantWallet}`);
     }
 
+    const feeRate = config.feeRate ?? DEFAULT_FEE_RATE;
+    if (typeof feeRate !== 'number' || !Number.isFinite(feeRate) || feeRate < 0 || feeRate >= 1) {
+      throw new Error(`Invalid feeRate: ${String(config.feeRate)} (expected a number >= 0 and < 1, e.g. 0.01 for 1%)`);
+    }
+    if (config.feeWallet !== undefined && !isValidAddress(config.feeWallet)) {
+      throw new Error(`Invalid feeWallet address: ${config.feeWallet}`);
+    }
+
     this.config = {
       merchantWallet: config.merchantWallet,
       chain: config.chain ?? DEFAULT_CHAIN,
       acceptedTokens: config.acceptedTokens ?? DEFAULT_TOKENS,
+      // Only used when feeRate > 0 (opt-in). Defaults to the WebMCP treasury.
       feeWallet: config.feeWallet ?? WEBMCP_TREASURY,
-      feeRate: config.feeRate ?? PLATFORM_FEE_RATE,
+      feeRate,
       paymentTtl: config.paymentTtl ?? DEFAULT_PAYMENT_TTL,
       confirmations: config.confirmations ?? 1,
       rpcUrl: config.rpcUrl ?? '',
@@ -182,8 +195,11 @@ export class PaymentGate {
 
     const tokenAddress = getTokenAddress(chain, token);
     const amountSmallest = toSmallestUnit(amount, token);
-    const feeAmount = calculateFee(amountSmallest, this.config.feeRate);
-    const netAmount = amountSmallest - feeAmount; // merchant receives net
+    // Fee is opt-in: with the default feeRate of 0 the merchant is charged the
+    // full amount and the envelope carries no fee fields.
+    const feeEnabled = this.config.feeRate > 0;
+    const feeAmount = feeEnabled ? calculateFee(amountSmallest, this.config.feeRate) : 0n;
+    const netAmount = amountSmallest - feeAmount; // merchant receives net of any opted-in fee
 
     const chainConfig = await import('../utils/chains.js').then(m => m.CHAIN_CONFIGS[chain]);
 
@@ -197,8 +213,12 @@ export class PaymentGate {
       amount: netAmount.toString(),
       amountDecimal: amount,
       recipient: this.config.merchantWallet,
-      feeRecipient: this.config.feeWallet as `0x${string}`,
-      feeAmount: feeAmount.toString(),
+      ...(feeEnabled
+        ? {
+            feeRecipient: this.config.feeWallet as `0x${string}`,
+            feeAmount: feeAmount.toString(),
+          }
+        : {}),
       nonce: generateNonce(),
       expiresAt: Math.floor(Date.now() / 1000) + this.config.paymentTtl,
       resource,

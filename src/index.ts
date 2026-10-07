@@ -1,11 +1,11 @@
 /**
- * @webmcp/payments — Agent payment acceptance layer for websites
+ * webmcp-payments — Agent payment acceptance layer for websites
  *
  * Phase 1: Core payment gate, on-chain verification, tool discovery
  *
  * @example
  * ```typescript
- * import { PaymentGate, PaymentDiscovery } from '@webmcp/payments';
+ * import { PaymentGate, PaymentDiscovery } from 'webmcp-payments';
  *
  * const gate = new PaymentGate({
  *   merchantWallet: '0xYourWallet',
@@ -62,6 +62,7 @@ export type { DiscoveryConfig, ToolRegistration, WebMCPManifest } from './discov
 export {
   WEBMCP_TREASURY,
   PLATFORM_FEE_RATE,
+  DEFAULT_FEE_RATE,
   CHAIN_CONFIGS,
   TOKEN_DECIMALS,
   toSmallestUnit,
@@ -72,4 +73,4 @@ export {
 } from './utils/chains.js';
 
 // ─── Version ───────────────────────────────────────────────────────────────
-export const VERSION = '0.3.0';
+export const VERSION = '0.4.0';

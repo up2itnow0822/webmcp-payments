@@ -6,7 +6,7 @@
  * - Cost comparison across services
  * - Headless payment flows with zero human interaction
  *
- * Compatible with @mcp-b/global polyfill and native Chrome 146 navigator.modelContext
+ * Compatible with @mcp-b/global polyfill and native navigator.modelContext where available
  */
 import type {
   WebMCPToolMetadata,
