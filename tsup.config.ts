@@ -14,4 +14,5 @@ export default defineConfig({
   splitting: false,
   target: 'node18',
   external: ['viem'],
+  treeshake: true,
 });
