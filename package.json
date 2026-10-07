@@ -1,0 +1,77 @@
+{
+  "name": "webmcp-payments",
+  "version": "0.3.1",
+  "description": "Agent payment acceptance layer for websites \u2014 x402 + WebMCP + Base chain",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./middleware": {
+      "import": "./dist/middleware/index.mjs",
+      "require": "./dist/middleware/index.js",
+      "types": "./dist/middleware/index.d.ts"
+    },
+    "./verifier": {
+      "import": "./dist/verifier/index.mjs",
+      "require": "./dist/verifier/index.js",
+      "types": "./dist/verifier/index.d.ts"
+    },
+    "./discovery": {
+      "import": "./dist/discovery/index.mjs",
+      "require": "./dist/discovery/index.js",
+      "types": "./dist/discovery/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts"
+  },
+  "keywords": [
+    "webmcp",
+    "x402",
+    "agent-payments",
+    "http-402",
+    "usdc",
+    "base",
+    "evm",
+    "mcp",
+    "ai-agent",
+    "payment-gateway"
+  ],
+  "author": "up2itnow5280",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/up2itnow/webmcp-payments"
+  },
+  "peerDependencies": {
+    "viem": "^2.0.0"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
