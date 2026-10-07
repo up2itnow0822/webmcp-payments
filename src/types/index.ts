@@ -92,12 +92,12 @@ export interface PaymentGateConfig {
     /** Accepted tokens */
     acceptedTokens?: SupportedToken[];
     /**
-     * Where an opted-in platform fee is sent. Only used when feeRate > 0.
-     * Defaults to WEBMCP_TREASURY (0xd7cF53B92A145A9EAFF210f56664865714F3D7BE).
+     * Your own wallet that receives the fee. Required when feeRate > 0;
+     * there is no default fee destination. Ignored when feeRate is 0.
      */
     feeWallet?: `0x${string}`;
     /**
-     * Platform fee rate, e.g. 0.01 = 1%. Default: 0 (no fee).
+     * Fee rate, e.g. 0.01 = 1%. Default: 0 (no fee). If > 0, feeWallet is required.
      * Changed in 0.4.0: 0.3.x defaulted to 0.01 (1%).
      */
     feeRate?: number;

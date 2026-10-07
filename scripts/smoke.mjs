@@ -35,18 +35,24 @@ async function check(label, mod, sub) {
   assert.equal(e0.amount, '500000');
   assert.equal(e0.recipient, MERCHANT);
   assert.ok(!('feeRecipient' in e0) && !('feeAmount' in e0), 'default envelope must not carry fee fields');
+  assert.ok(!JSON.stringify(e0).includes(TREASURY));
   const r0 = await g0.protect(g0.require({ amount: '0.50', token: 'USDC', chain: 'base' }), async () => 1, 'r')(undefined);
   assert.equal(r0.status, 402);
   assert.ok(!('feeAmount' in r0.paymentRequired));
   ok(`${label}: default -> full amount 500000, no fee fields (buildPaymentEnvelope + protect 402)`);
 
-  // opted in at 1%, no feeWallet -> treasury
-  const g1 = new PaymentGate({ merchantWallet: MERCHANT, feeRate: 0.01 });
+  // feeRate > 0 without feeWallet must throw (no default destination)
+  assert.throws(() => new PaymentGate({ merchantWallet: MERCHANT, feeRate: 0.01 }), /feeWallet is required when feeRate > 0/);
+  ok(`${label}: feeRate 0.01 without feeWallet -> throws`);
+
+  // opted in at 1% with own wallet
+  const g1 = new PaymentGate({ merchantWallet: MERCHANT, feeRate: 0.01, feeWallet: OWN });
   const e1 = await g1.buildPaymentEnvelope(g1.require({ amount: '0.50', token: 'USDC', chain: 'base' }), 'r');
   assert.equal(e1.amount, '495000');
   assert.equal(e1.feeAmount, '5000');
-  assert.equal(e1.feeRecipient, TREASURY);
-  ok(`${label}: feeRate 0.01 -> amount 495000 + feeAmount 5000 to ${TREASURY}`);
+  assert.equal(e1.feeRecipient, OWN);
+  assert.ok(!JSON.stringify(e1).includes(TREASURY));
+  ok(`${label}: feeRate 0.01 + own feeWallet -> amount 495000 + feeAmount 5000 to own wallet`);
 
   // opted in with own wallet
   const g2 = new PaymentGate({ merchantWallet: MERCHANT, feeRate: mod.PLATFORM_FEE_RATE, feeWallet: OWN });
@@ -54,7 +60,7 @@ async function check(label, mod, sub) {
   assert.equal(e2.amount, '9900000');
   assert.equal(e2.feeAmount, '100000');
   assert.equal(e2.feeRecipient, OWN);
-  ok(`${label}: feeRate 1% + feeWallet override -> fee to override wallet`);
+  ok(`${label}: PLATFORM_FEE_RATE + own feeWallet -> fee to own wallet`);
 
   assert.throws(() => new PaymentGate({ merchantWallet: MERCHANT, feeRate: 1 }), /feeRate/);
   ok(`${label}: invalid feeRate rejected`);

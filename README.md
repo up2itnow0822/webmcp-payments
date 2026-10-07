@@ -83,38 +83,28 @@ discovery.toDiscoveryResponse(); // { status: 200, headers, body } for e.g. GET 
 
 | Entry point | Exports |
 |---|---|
-| `webmcp-payments` | `PaymentGate`, `extractProofFromHeaders`, `PaymentVerifier`, `PaymentDiscovery`, `createDiscovery`, `WEBMCP_TREASURY`, `PLATFORM_FEE_RATE`, `DEFAULT_FEE_RATE`, `CHAIN_CONFIGS`, `TOKEN_DECIMALS`, `toSmallestUnit`, `fromSmallestUnit`, `calculateFee`, `generateNonce`, `getTokenAddress`, `VERSION`, plus types |
+| `webmcp-payments` | `PaymentGate`, `extractProofFromHeaders`, `PaymentVerifier`, `PaymentDiscovery`, `createDiscovery`, `PLATFORM_FEE_RATE`, `DEFAULT_FEE_RATE`, `WEBMCP_TREASURY` (deprecated, unused), `CHAIN_CONFIGS`, `TOKEN_DECIMALS`, `toSmallestUnit`, `fromSmallestUnit`, `calculateFee`, `generateNonce`, `getTokenAddress`, `VERSION`, plus types |
 | `webmcp-payments/middleware` | `PaymentGate`, `extractProofFromHeaders` |
 | `webmcp-payments/verifier` | `PaymentVerifier` |
 | `webmcp-payments/discovery` | `PaymentDiscovery`, `createDiscovery` |
 
 ## Fees
 
-**The default fee is 0%.** With the default configuration the 402 envelope asks the agent to pay the full price to your `merchantWallet`, and it contains no `feeRecipient` or `feeAmount` fields. Nothing is sent to anyone else.
+**The default fee is 0%.** With the default configuration the 402 envelope asks the agent to pay the full price to your `merchantWallet`, and it contains no `feeRecipient` or `feeAmount` fields. Nothing is sent to anyone else, and the package has no built-in fee destination.
 
-**Opting in.** A platform fee is only added if you pass `feeRate` greater than 0:
+**Charging a fee.** To add a fee you must pass **both** `feeRate` (greater than 0 and less than 1) **and** your own `feeWallet`:
 
 ```ts
-import { PaymentGate, PLATFORM_FEE_RATE } from 'webmcp-payments';
-
 const gate = new PaymentGate({
   merchantWallet: '0xYourMerchantWallet',
-  feeRate: PLATFORM_FEE_RATE,          // 0.01 = 1%. Any value >= 0 and < 1 is accepted.
-  // feeWallet: '0xYourFeeWallet',     // optional, see below
+  feeRate: 0.01,                    // 1%
+  feeWallet: '0xYourFeeWallet',     // required whenever feeRate > 0
 });
 ```
 
-When a fee is enabled, the envelope's `amount` is the price minus the fee (what the merchant receives), and the envelope adds `feeRecipient` and `feeAmount` (in the token's smallest unit). For a 0.50 USDC price at 1%: `amount: '495000'`, `feeAmount: '5000'`.
+Passing `feeRate > 0` without `feeWallet` throws `feeWallet is required when feeRate > 0`. With a fee, the envelope's `amount` is the price minus the fee (what the merchant receives), and the envelope adds `feeRecipient` (your `feeWallet`) and `feeAmount` (in the token's smallest unit). For a 0.50 USDC price at 1%: `amount: '495000'`, `feeAmount: '5000'`. With `feeRate` left out or set to 0, `feeWallet` is ignored.
 
-**Where an opted-in fee goes.** To `feeWallet` if you set it. If you enable a fee without setting `feeWallet`, the fee goes to the WebMCP treasury address, exported as `WEBMCP_TREASURY`:
-
-```
-0xd7cF53B92A145A9EAFF210f56664865714F3D7BE
-```
-
-**Overriding it.** Pass your own `feeWallet` (any valid EVM address) together with `feeRate`. Pass `feeRate: 0` (or leave it out) to charge no fee at all; `feeWallet` is ignored in that case.
-
-**Change from 0.3.x.** Versions 0.3.0 and 0.3.1 applied a 1% fee to `WEBMCP_TREASURY` by default unless you overrode `feeWallet`/`feeRate`, and this was not documented. From 0.4.0 the default is 0%. To keep the 0.3.x behaviour, set `feeRate: PLATFORM_FEE_RATE`. See [CHANGELOG.md](./CHANGELOG.md).
+**Change from 0.3.x.** Versions 0.3.0 and 0.3.1 applied an undocumented 1% fee by default, sent to `0xd7cF53B92A145A9EAFF210f56664865714F3D7BE` unless you overrode `feeWallet`/`feeRate`. From 0.4.0 the default is 0% and a fee only ever goes to a `feeWallet` you supply. The `WEBMCP_TREASURY` export still exists so old imports compile, but it's deprecated and unused; don't use it. See [CHANGELOG.md](./CHANGELOG.md).
 
 ## Security notes and known limitations
 
@@ -124,7 +114,7 @@ Read these before using the package with real funds.
 - **Session tokens don't carry over.** Tokens returned after verification are signed by the gate's internal verifier with a random per-process secret, so they won't validate on later requests. Treat each request as needing its own proof.
 - **No replay protection.** The library doesn't remember which transaction hashes it has already accepted, and the gate takes the nonce from the proof. Keep your own store of used `txHash` values and reject repeats.
 - **The payer isn't checked.** `PaymentVerifier` checks that the merchant (and, if enabled, the fee wallet) received at least the expected amount, but doesn't check that the transfer came from `proof.payer`.
-- **Opted-in fees aren't enforced on-chain.** If a fee is enabled, a transaction that pays the merchant its net amount still verifies even without the fee transfer.
+- **Fees aren't enforced on-chain.** If you configure a fee, a transaction that pays the merchant its net amount still verifies even without the fee transfer.
 - No public source repository exists for this package. The published files include source maps with the full TypeScript source.
 
 ## License

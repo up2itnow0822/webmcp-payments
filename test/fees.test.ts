@@ -45,13 +45,19 @@ describe('fee defaults (0.4.0)', () => {
     expect(env.feeRecipient).toBeUndefined();
   });
 
-  it('opted in at 1% with no feeWallet: net amount + fee fields to the treasury', async () => {
-    const gate = new PaymentGate({ merchantWallet: MERCHANT, feeRate: 0.01 });
+  it('feeRate > 0 without feeWallet throws (no default fee destination)', () => {
+    expect(() => new PaymentGate({ merchantWallet: MERCHANT, feeRate: 0.01 })).toThrow(/feeWallet is required when feeRate > 0/);
+    expect(() => new PaymentGate({ merchantWallet: MERCHANT, feeRate: PLATFORM_FEE_RATE })).toThrow(/feeWallet is required/);
+    expect(() => new PaymentGate({ merchantWallet: MERCHANT, feeRate: 0.0001 })).toThrow(/feeWallet is required/);
+  });
+
+  it('opted in at 1% with own feeWallet: net amount + fee fields to that wallet', async () => {
+    const gate = new PaymentGate({ merchantWallet: MERCHANT, feeRate: 0.01, feeWallet: OWN_FEE_WALLET });
     const env = await gate.buildPaymentEnvelope(gate.require({ amount: '0.50', token: 'USDC', chain: 'base' }), 'r');
     expect(env.amount).toBe('495000');
     expect(env.feeAmount).toBe('5000');
-    expect(env.feeRecipient).toBe(WEBMCP_TREASURY);
-    expect(WEBMCP_TREASURY).toBe('0xd7cF53B92A145A9EAFF210f56664865714F3D7BE');
+    expect(env.feeRecipient).toBe(OWN_FEE_WALLET);
+    expect(JSON.stringify(env)).not.toContain(WEBMCP_TREASURY);
   });
 
   it('opted in with PLATFORM_FEE_RATE and own feeWallet: fee goes to that wallet', async () => {
@@ -66,7 +72,11 @@ describe('fee defaults (0.4.0)', () => {
     expect(() => new PaymentGate({ merchantWallet: MERCHANT, feeRate: -0.01 })).toThrow(/feeRate/);
     expect(() => new PaymentGate({ merchantWallet: MERCHANT, feeRate: 1 })).toThrow(/feeRate/);
     expect(() => new PaymentGate({ merchantWallet: MERCHANT, feeRate: Number.NaN })).toThrow(/feeRate/);
-    expect(() => new PaymentGate({ merchantWallet: MERCHANT, feeRate: 0.01, feeWallet: '0xnope' as `0x${string}` })).toThrow(/feeWallet/);
+    expect(() => new PaymentGate({ merchantWallet: MERCHANT, feeRate: 0.01, feeWallet: '0xnope' as `0x${string}` })).toThrow(/Invalid feeWallet/);
+  });
+
+  it('WEBMCP_TREASURY is still exported (deprecated, unused) with its 0.3.x value', () => {
+    expect(WEBMCP_TREASURY).toBe('0xd7cF53B92A145A9EAFF210f56664865714F3D7BE');
   });
 
   it('constants', () => {
@@ -119,16 +129,16 @@ describe('verifier with and without fee fields', () => {
   });
 
   it('opted in (1%): merchant net + fee transfer verifies (0.3.x behaviour preserved)', async () => {
-    const env = await envelope(new PaymentGate({ merchantWallet: MERCHANT, feeRate: 0.01 }), '0.50');
-    const res = await verifierWithLogs([transferLog(MERCHANT, 495000n), transferLog(WEBMCP_TREASURY, 5000n)]).verify(
+    const env = await envelope(new PaymentGate({ merchantWallet: MERCHANT, feeRate: 0.01, feeWallet: OWN_FEE_WALLET }), '0.50');
+    const res = await verifierWithLogs([transferLog(MERCHANT, 495000n), transferLog(OWN_FEE_WALLET, 5000n)]).verify(
       { txHash: TX, chain: 'base', nonce: env.nonce, payer: PAYER }, env);
     expect(res.verified).toBe(true);
   });
 
   it('legacy 0.3.x envelope shape (fee fields present) still verifies', async () => {
     const env = await envelope(new PaymentGate({ merchantWallet: MERCHANT }), '0.50');
-    const legacy = { ...env, amount: '495000', feeRecipient: WEBMCP_TREASURY, feeAmount: '5000' } as X402PaymentEnvelope;
-    const res = await verifierWithLogs([transferLog(MERCHANT, 495000n), transferLog(WEBMCP_TREASURY, 5000n)]).verify(
+    const legacy = { ...env, amount: '495000', feeRecipient: OWN_FEE_WALLET, feeAmount: '5000' } as X402PaymentEnvelope;
+    const res = await verifierWithLogs([transferLog(MERCHANT, 495000n), transferLog(OWN_FEE_WALLET, 5000n)]).verify(
       { txHash: TX, chain: 'base', nonce: env.nonce, payer: PAYER }, legacy);
     expect(res.verified).toBe(true);
   });

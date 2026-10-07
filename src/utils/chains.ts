@@ -3,19 +3,22 @@
  */
 import type { ChainConfig, SupportedChain, SupportedToken } from '../types/index.js';
 
-// ─── WebMCP treasury ─────────────────────────────────────────────────────
-// Receives the optional platform fee ONLY when an integrator opts in by
-// passing `feeRate > 0` to PaymentGate without their own `feeWallet`.
-// Nothing is sent here by default (default feeRate is 0 since 0.4.0).
+/**
+ * @deprecated Do not use. Kept only so existing imports keep compiling.
+ * Nothing in this package uses this address since 0.4.0: there is no default
+ * fee destination. It was the implicit 1% fee recipient in 0.3.x. To charge a
+ * fee, pass both `feeRate` and your own `feeWallet` to PaymentGate.
+ */
 export const WEBMCP_TREASURY = '0xd7cF53B92A145A9EAFF210f56664865714F3D7BE' as const;
 
-// ─── Suggested opt-in platform fee rate: 1.0% ────────────────────────────
-// Not applied by default. PaymentGate's default feeRate is DEFAULT_FEE_RATE (0).
-// This was the implicit default in 0.3.x; pass `feeRate: PLATFORM_FEE_RATE`
-// to keep the 0.3.x behaviour.
+/**
+ * A 1% rate constant (0.01). Not applied by default: PaymentGate's default
+ * feeRate is DEFAULT_FEE_RATE (0). If you pass it as `feeRate`, you must also
+ * pass your own `feeWallet`.
+ */
 export const PLATFORM_FEE_RATE = 0.01;
 
-// ─── Default fee rate used by PaymentGate: 0% (no fee) ────────────────────
+/** Default fee rate used by PaymentGate: 0 (no fee). */
 export const DEFAULT_FEE_RATE = 0;
 
 // ─── USDC decimals ────────────────────────────────────────────────────────

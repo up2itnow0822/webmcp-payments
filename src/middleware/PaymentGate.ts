@@ -10,9 +10,9 @@
  *   - Native browser WebMCP (navigator.modelContext), where available
  *   - Express / Fastify / plain Node.js HTTP handlers
  *
- * Fees: none by default (feeRate 0). A platform fee is only added when the
- * integrator passes `feeRate > 0`; it goes to `feeWallet`, or to
- * WEBMCP_TREASURY if no feeWallet is given.
+ * Fees: none by default (feeRate 0). A fee is only added when the integrator
+ * passes `feeRate > 0` AND their own `feeWallet`; there is no default fee
+ * destination (constructing with feeRate > 0 and no feeWallet throws).
  */
 import type {
   PaymentGateConfig,
@@ -31,7 +31,6 @@ import type {
   PaymentEvent,
 } from '../types/index.js';
 import {
-  WEBMCP_TREASURY,
   DEFAULT_FEE_RATE,
   getTokenAddress,
   toSmallestUnit,
@@ -48,7 +47,7 @@ const DEFAULT_CHAIN: SupportedChain = 'base';
 const DEFAULT_TOKENS: SupportedToken[] = ['USDC'];
 
 export class PaymentGate {
-  private readonly config: Required<PaymentGateConfig>;
+  private readonly config: Required<Omit<PaymentGateConfig, 'feeWallet'>> & { feeWallet?: `0x${string}` };
   private readonly verifier: PaymentVerifier;
   private readonly eventHandlers: PaymentEventHandler[] = [];
 
@@ -64,13 +63,19 @@ export class PaymentGate {
     if (config.feeWallet !== undefined && !isValidAddress(config.feeWallet)) {
       throw new Error(`Invalid feeWallet address: ${config.feeWallet}`);
     }
+    if (feeRate > 0 && config.feeWallet === undefined) {
+      throw new Error(
+        `feeWallet is required when feeRate > 0 (got feeRate ${feeRate}). ` +
+          'There is no default fee destination: pass your own feeWallet address, or omit feeRate (default 0) to charge no fee.'
+      );
+    }
 
     this.config = {
       merchantWallet: config.merchantWallet,
       chain: config.chain ?? DEFAULT_CHAIN,
       acceptedTokens: config.acceptedTokens ?? DEFAULT_TOKENS,
-      // Only used when feeRate > 0 (opt-in). Defaults to the WebMCP treasury.
-      feeWallet: config.feeWallet ?? WEBMCP_TREASURY,
+      // Only used when feeRate > 0, in which case it is required (checked above).
+      ...(config.feeWallet !== undefined ? { feeWallet: config.feeWallet } : {}),
       feeRate,
       paymentTtl: config.paymentTtl ?? DEFAULT_PAYMENT_TTL,
       confirmations: config.confirmations ?? 1,
@@ -197,7 +202,7 @@ export class PaymentGate {
     const amountSmallest = toSmallestUnit(amount, token);
     // Fee is opt-in: with the default feeRate of 0 the merchant is charged the
     // full amount and the envelope carries no fee fields.
-    const feeEnabled = this.config.feeRate > 0;
+    const feeEnabled = this.config.feeRate > 0 && this.config.feeWallet !== undefined;
     const feeAmount = feeEnabled ? calculateFee(amountSmallest, this.config.feeRate) : 0n;
     const netAmount = amountSmallest - feeAmount; // merchant receives net of any opted-in fee
 
@@ -215,7 +220,7 @@ export class PaymentGate {
       recipient: this.config.merchantWallet,
       ...(feeEnabled
         ? {
-            feeRecipient: this.config.feeWallet as `0x${string}`,
+            feeRecipient: this.config.feeWallet,
             feeAmount: feeAmount.toString(),
           }
         : {}),
