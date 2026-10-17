@@ -1,3 +1,6 @@
+> [!WARNING]
+> **Paused for security maintenance. Do not use in production.**
+
 # webmcp-payments
 
 Server-side helpers for charging AI agents in stablecoins over [x402](https://www.x402.org/) (HTTP 402 Payment Required) on EVM chains:
