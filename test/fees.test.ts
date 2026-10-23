@@ -82,7 +82,7 @@ describe('fee defaults (0.4.0)', () => {
   it('constants', () => {
     expect(DEFAULT_FEE_RATE).toBe(0);
     expect(PLATFORM_FEE_RATE).toBe(0.01);
-    expect(root.VERSION).toBe('0.4.0');
+    expect(root.VERSION).toBe('0.4.2');
   });
 });
 
