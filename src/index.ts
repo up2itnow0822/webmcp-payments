@@ -23,7 +23,7 @@
  */
 
 // ─── Core classes ──────────────────────────────────────────────────────────
-export { PaymentGate, extractProofFromHeaders } from './middleware/PaymentGate.js';
+export { PaymentGate, extractProofFromHeaders, InMemorySpentTxStore } from './middleware/PaymentGate.js';
 export { PaymentVerifier } from './verifier/PaymentVerifier.js';
 export { PaymentDiscovery, createDiscovery } from './discovery/PaymentDiscovery.js';
 
@@ -44,6 +44,7 @@ export type {
   VerificationResult,
   // Gate
   PaymentGateConfig,
+  SpentTxStore,
   GatedToolResult,
   ToolHandler,
   RequestContext,
@@ -73,4 +74,4 @@ export {
 } from './utils/chains.js';
 
 // ─── Version ───────────────────────────────────────────────────────────────
-export const VERSION = '0.4.0';
+export const VERSION = '0.4.2';

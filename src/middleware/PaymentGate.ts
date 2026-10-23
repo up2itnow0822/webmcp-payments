@@ -16,6 +16,7 @@
  */
 import type {
   PaymentGateConfig,
+  SpentTxStore,
   PricingConfig,
   PerCallPricing,
   MeteredPricing,
@@ -47,8 +48,10 @@ const DEFAULT_CHAIN: SupportedChain = 'base';
 const DEFAULT_TOKENS: SupportedToken[] = ['USDC'];
 
 export class PaymentGate {
-  private readonly config: Required<Omit<PaymentGateConfig, 'feeWallet'>> & { feeWallet?: `0x${string}` };
+  private readonly config: Required<Omit<PaymentGateConfig, 'feeWallet' | 'spentStore'>> & { feeWallet?: `0x${string}` };
   private readonly verifier: PaymentVerifier;
+  private readonly spentStore: SpentTxStore;
+  private readonly accessTokenSecret: string;
   private readonly eventHandlers: PaymentEventHandler[] = [];
 
   constructor(config: PaymentGateConfig) {
@@ -70,6 +73,7 @@ export class PaymentGate {
       );
     }
 
+    this.spentStore = config.spentStore ?? new InMemorySpentTxStore();
     this.config = {
       merchantWallet: config.merchantWallet,
       chain: config.chain ?? DEFAULT_CHAIN,
@@ -86,9 +90,15 @@ export class PaymentGate {
       ? { [this.config.chain]: this.config.rpcUrl }
       : {};
 
+    // One secret for issuing AND verifying access tokens. Never a hard-coded
+    // default: a public default let anyone forge tokens (auth bypass).
+    const envSecret = process.env['WEBMCP_ACCESS_TOKEN_SECRET'];
+    this.accessTokenSecret = envSecret && envSecret.length >= 16 ? envSecret : randomSecret();
+
     this.verifier = new PaymentVerifier({
       confirmations: this.config.confirmations,
       rpcUrls,
+      accessTokenSecret: this.accessTokenSecret,
     });
   }
 
@@ -245,7 +255,23 @@ export class PaymentGate {
       payer: proof.payer,
     });
 
-    const result = await this.verifier.verify(proof, envelope);
+    // Replay protection (S5): one on-chain payment unlocks one request.
+    // Claim BEFORE the async verify so concurrent replays cannot all pass.
+    const spentKey = `${proof.chain}:${String(proof.txHash).toLowerCase()}`;
+    if (!(await this.spentStore.claim(spentKey))) {
+      const error = 'Payment transaction already used';
+      this.emit({ type: 'payment.failed', timestamp: Date.now(), nonce: proof.nonce, error });
+      return { verified: false, error };
+    }
+
+    let result: import('../types/index.js').VerificationResult;
+    try {
+      result = await this.verifier.verify(proof, envelope);
+    } catch (err) {
+      await this.spentStore.release(spentKey);
+      throw err;
+    }
+    if (!result.verified) await this.spentStore.release(spentKey);
 
     if (result.verified) {
       this.emit({
@@ -296,7 +322,8 @@ export class PaymentGate {
 
       if (accessToken) {
         const tokenResult = verifyAccessToken(accessToken, this.getAccessTokenSecret());
-        if (tokenResult.valid) {
+        // Token must be for THIS resource (a cheap resource's token must not unlock another).
+        if (tokenResult.valid && tokenResult.payload?.resource === resourceId) {
           (req as unknown as Record<string, unknown>)['paymentVerified'] = true;
           next();
           return;
@@ -367,8 +394,7 @@ export class PaymentGate {
   }
 
   private getAccessTokenSecret(): string {
-    // In production: load from env or config
-    return process.env['WEBMCP_ACCESS_TOKEN_SECRET'] ?? 'webmcp-default-secret-change-me';
+    return this.accessTokenSecret;
   }
 
   private emit(event: PaymentEvent): void {
@@ -417,4 +443,23 @@ interface ExpressLikeRes {
   status(code: number): ExpressLikeRes;
   json(body: unknown): void;
   setHeader(name: string, value: string): void;
+}
+
+/** Default single-process replay store. */
+export class InMemorySpentTxStore implements SpentTxStore {
+  private readonly keys = new Set<string>();
+  claim(key: string): boolean {
+    if (this.keys.has(key)) return false;
+    this.keys.add(key);
+    return true;
+  }
+  release(key: string): void {
+    this.keys.delete(key);
+  }
+}
+
+function randomSecret(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
 }

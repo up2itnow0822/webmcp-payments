@@ -145,8 +145,8 @@ describe('verifier with and without fee fields', () => {
 });
 
 describe('export surface', () => {
-  it('keeps every 0.3.1 root export and adds only DEFAULT_FEE_RATE', () => {
+  it('keeps every 0.3.1 root export and adds only DEFAULT_FEE_RATE + InMemorySpentTxStore', () => {
     const v031 = ['CHAIN_CONFIGS','PLATFORM_FEE_RATE','PaymentDiscovery','PaymentGate','PaymentVerifier','TOKEN_DECIMALS','VERSION','WEBMCP_TREASURY','calculateFee','createDiscovery','extractProofFromHeaders','fromSmallestUnit','generateNonce','getTokenAddress','toSmallestUnit'];
-    expect(Object.keys(root).sort()).toEqual([...v031, 'DEFAULT_FEE_RATE'].sort());
+    expect(Object.keys(root).sort()).toEqual([...v031, 'DEFAULT_FEE_RATE', 'InMemorySpentTxStore'].sort());
   });
 });

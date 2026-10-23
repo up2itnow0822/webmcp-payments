@@ -107,6 +107,21 @@ export interface PaymentGateConfig {
     confirmations?: number;
     /** Custom RPC URL for the chain */
     rpcUrl?: string;
+    /**
+     * Store of already-used payment transactions (replay protection).
+     * Default: in-memory (single process). Use a shared store (Redis/DB)
+     * when running more than one server instance.
+     */
+    spentStore?: SpentTxStore;
+}
+/**
+ * Replay-protection store. `claim` must be atomic: it returns true only for
+ * the first caller for a given key, false if the key is claimed or spent.
+ */
+export interface SpentTxStore {
+    claim(key: string): Promise<boolean> | boolean;
+    /** Undo a claim when verification failed, so an honest retry can succeed. */
+    release(key: string): Promise<void> | void;
 }
 export type ToolHandler<TInput = unknown, TOutput = unknown> = (input: TInput, context?: RequestContext) => Promise<TOutput>;
 export interface RequestContext {
