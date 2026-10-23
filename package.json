@@ -60,7 +60,7 @@
     "viem": "^2.0.0"
   },
   "dependencies": {
-    "viem": "^2.0.0"
+    "viem": "^2.21.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
