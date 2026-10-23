@@ -2,7 +2,7 @@
  * Simple HMAC-based access tokens for session management
  * No external deps — uses Node.js built-in crypto
  */
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 const DEFAULT_TTL_SECONDS = 3600; // 1 hour
 
@@ -59,7 +59,9 @@ export function verifyAccessToken(
     }
 
     const expectedSig = createHmac('sha256', secret).update(payloadB64).digest('base64url');
-    if (sig !== expectedSig) {
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expectedSig);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
       return { valid: false, error: 'Invalid signature' };
     }
 

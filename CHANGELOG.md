@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.2 (security)
+
+- **Replay protection (S5):** `PaymentGate.verifyPayment` now accepts each on-chain payment tx once. The tx is claimed before verification, so concurrent replays can't all pass; a failed verification releases the claim. Default store is in-memory (single process); pass `spentStore` (a `SpentTxStore`) for multi-instance servers. New export: `InMemorySpentTxStore`.
+- **Access-token forgery fixed:** removed the public default HMAC secret (`webmcp-default-secret-change-me`). Tokens are issued and verified with one secret: `WEBMCP_ACCESS_TOKEN_SECRET` (16+ chars) or a random per-process secret. Before, tokens issued after payment never verified, while tokens forged with the default secret did.
+- **Express middleware:** an access token now only unlocks the resource it was issued for.
+- Signature check uses a constant-time compare.
+- 0.4.1 was a "paused for security maintenance" stub.
+
 ## 0.4.0
 
 ### Changed: no fee by default, and no default fee destination (behaviour change)

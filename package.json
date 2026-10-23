@@ -1,6 +1,6 @@
 {
   "name": "webmcp-payments",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "description": "x402 (HTTP 402) payment gate, on-chain verifier and WebMCP pricing discovery for EVM chains (Base, Arbitrum, Optimism). No platform fee by default.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
