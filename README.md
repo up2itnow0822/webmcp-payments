@@ -1,5 +1,7 @@
 # webmcp-payments
 
+Paused for security maintenance. Do not use in production.
+
 Server-side helpers for charging AI agents in stablecoins over [x402](https://www.x402.org/) (HTTP 402 Payment Required) on EVM chains:
 
 - **`PaymentGate`** wraps a tool handler or an Express route. If the caller hasn't paid, it answers `402` with an x402 payment envelope. If the caller sends a payment proof, it checks the transaction on-chain before running your handler.
